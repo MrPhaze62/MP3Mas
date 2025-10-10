@@ -9,4 +9,6 @@ Submods/MP3Mas/music
 
 Now add your music, supports .ogg/mp3/wav/flac/opus
 
+You can find the MP3Player inside the extra button the place where you find the Zoom Bar and BonkAMon and OpenWorld Submods respectively (if you have them)
+
 eggjoy. STILL A WIP. So there's no official release... yet. but you can just make a new folder in submods called MP3Mas and download the source code if you'd like to place it in there.
