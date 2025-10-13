@@ -8,7 +8,7 @@ init -990 python:
         author="Phazeee",
         name="MP3MasPlayer",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
-        version="0.0.2",
+        version="0.0.3",
     )
 
 
@@ -147,11 +147,45 @@ define MUSIC_FOLDER = "submods/MP3Mas/music/"
 default music_track_list = []
 default music_current_index = 0
 default music_is_playing = False
+# below is the progress bar, we're gonna make it simulated/fake. for UI purposes. not bothered of actually displaying true timing just yet. that's a future me issue.
+default music_progress = 0.0        # current progress (0.0–1.0)
+default music_progress_time = 0.0   # elapsed seconds
+default music_total_time = 180.0    # estimated fake length in seconds (fake default)
+
 
 init python:
     import os
+    import time
 
     SUPPORTED_AUDIO_EXTS = [".mp3", ".ogg", ".wav", ".flac", ".opus"]
+# progress bar simulation. 
+    def music_reset_progress():
+        global music_progress, music_progress_time
+        music_progress = 0.0
+        music_progress_time = 0.0
+
+    def music_update_progress(dt=1.0):
+        global music_progress, music_progress_time, music_total_time
+
+        # Only move the bar if a song is actually playing.
+        if music_is_playing and renpy.music.is_playing(channel="music"):
+            music_progress_time += dt
+            if music_total_time > 0:
+                music_progress = min(1.0, music_progress_time / music_total_time)
+        renpy.restart_interaction()
+
+    #init python:
+    def format_time(seconds):
+    # Formats seconds into mins/sec. e.g M:SS as in 1:05.
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return "%d:%02d" % (minutes, secs)
+
+    def get_progress_text():
+        # Returns the numbers like 0:34 / 3:00
+        return "%s / %s" % (format_time(music_progress_time), format_time(music_total_time))
+
+
 
 # Loads all supported audio files from the folder.
     def music_load_tracks():
@@ -189,10 +223,12 @@ init python:
         global music_current_index, music_is_playing
         if not music_track_list:
             music_load_tracks()
+            #music_reset_progress()
         if index is not None:
             music_current_index = index
         if not music_track_list:
             return
+        #music_reset_progress()
     
     # Check if the music is paused
         if renpy.music.is_playing(channel="music") and not music_is_playing:
@@ -207,6 +243,7 @@ init python:
         renpy.music.stop(channel="music")
         global music_is_playing
         music_is_playing = False
+        music_reset_progress()
 
     def music_pause():
         #Pause or resume the current track, this tripped me off. alot. see? you'd expect it to be simple but no... music never is.
@@ -226,6 +263,7 @@ init python:
             return
         music_current_index = (music_current_index + 1) % len(music_track_list)
         music_play(music_current_index)
+        music_reset_progress()
 
     def music_prev():
         global music_current_index
@@ -233,6 +271,7 @@ init python:
             return
         music_current_index = (music_current_index - 1) % len(music_track_list)
         music_play(music_current_index)
+        music_reset_progress()
 
 # THE ACTUAL UI BELOW! Fear my terrible design for i have no [BLEEP]ing clue how to design for the life of me!
 
@@ -290,15 +329,16 @@ screen mp3_player_screen():
                     $ display_line = status_text + " " + current_track #if status_text != "Stopped" else "Song is stopped!"
                     text display_line color "#ffffff" size 18 xalign 0.5
 
-                # simple static progress bar... hint. it does nothing but look pretty... for now.
+                # a simulated progress bar UI is here, now fake in 720p quality! 
                 bar:
-                    value 0.5
+                    value music_progress
                     xsize 400
                     ysize 10
                     xalign 0.5
                     left_bar Frame(Solid("#00cc99"), 0, 0)
                     right_bar Frame(Solid("#333333"), 0, 0)
                     thumb None
+                text get_progress_text() color "#ffffff" size 16 xalign 0.5
 
                 hbox:
                     spacing 12
@@ -345,14 +385,6 @@ screen mp3_player_screen():
                 hover_background Solid("#df1212")
                 xalign 0.5
                 action [Hide("mp3_player_screen"), Jump("MP3Retrun")]
-                
-            
-            #textbutton "?":
-            #  text_color "#ffffff"
-            # background Solid("#333333")
-            # hover_background Solid("#00cc99")
-            #  xalign 0.5
-            #  action Show("mp3_info_popup")
 
         # Info button in top right corner... not the left. where the button shot right off the screen beyond the stratosphere... the trauma.
         textbutton "?":
@@ -367,6 +399,9 @@ screen mp3_player_screen():
             xoffset -10
             yoffset 10
             action Show("mp3_info_popup")
+
+    timer 1.0 action Function(music_update_progress, 1.0) repeat True
+
 
 #labels land
 
@@ -402,7 +437,7 @@ screen mp3_info_popup():
         xalign 0.5
         yalign 0.5
         xsize 460
-        ysize 320
+        ysize 420
         xpadding 20
         ypadding 20
         vbox:
@@ -412,6 +447,7 @@ screen mp3_info_popup():
             text "• Supports: MP3, OGG, WAV, FLAC, OPUS" color "#ffffff" size 18
             text "• Use the Play, Pause, Stop, Next, and Prev buttons to control playback." color "#ffffff" size 18
             text "• Monika will remember your last played song!" color "#ffffff" size 18
+            text "• The Progress Bar is Simulated/fake. it will always end at 3:00, perhaps a future update may make it real." color "#ffffff" size 18
 
             textbutton "Close":
                 text_color "#ffffff"
