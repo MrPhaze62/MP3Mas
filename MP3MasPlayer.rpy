@@ -8,8 +8,25 @@ init -990 python:
         author="Phazeee",
         name="MP3MasPlayer",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
-        version="0.0.3",
+        version="0.0.4",
     )
+
+
+init 10001 python:
+    # Dynamically decide the MP3 button based on submods installed in extra menu.
+    def get_mp3_button_area():
+        ow = store.mas_submod_utils.isSubmodInstalled("Open World")
+        bonk = store.mas_submod_utils.isSubmodInstalled("BonkAMon")
+
+        # Adjust MP3 position depending on which submods are present
+        if ow and bonk:
+            return (530, 639, 202, 65)  # Both installed - button to the right
+        elif ow:
+            return (310, 639, 202, 65)  # Only Open World - below it.
+        elif bonk:
+            return (520, 639, 202, 65)  # Only BonkAMon - same spot as before
+        else:
+            return (310, 639, 202, 65)  # Neither 
 
 
 init 10001:
@@ -45,76 +62,54 @@ init 10001:
                     style "mas_adjust_vbar"
                     xalign 0.5
                 $ store.mas_sprites.adjust_zoom()
-        if store.mas_submod_utils.isSubmodInstalled("Open World"):
-                frame:
-                    area (310, 550, 202, 65)
-                    style "mas_extra_menu_frame"
-                    if persistent._mas_in_idle_mode == True:
-                        textbutton ("Open World"):
-                            xalign 0.5
-                            yalign 0.5
-                            action NullAction()
-                    else:
-                        textbutton ("Open World"):
-                            xalign 0.5
-                            yalign 0.5
-                            action [Hide("mas_extramenu_area"), Jump("view_OW")] hover_sound gui.hover_sound
-                frame:        
-                    area (520, 639, 202, 65)
-                    style "mas_extra_menu_frame"
-                    if persistent._mas_in_idle_mode == True:
-                        textbutton ("MP3 Player!"):
-                            xalign 0.5
-                            yalign 0.5
-                            action NullAction()
-                    else:
-                        textbutton ("MP3 Player!"):
-                            xalign 0.5
-                            yalign 0.5
-                            action [Hide("mas_extramenu_area"), Jump("MP3PlayerMenu")] hover_sound gui.hover_sound
 
-        if store.mas_submod_utils.isSubmodInstalled("BonkAMon"):
-                frame:
-                    area (310, 639, 202, 65)
-                    style "mas_extra_menu_frame"
-                    if persistent._mas_in_idle_mode == True:
-                        textbutton ("Bonk Monika"):
-                            xalign 0.5
-                            yalign 0.5
-                            action NullAction()
-                    else:
-                        textbutton ("Bonk Monika"):
-                            xalign 0.5
-                            yalign 0.5
-                            action [Hide("mas_extramenu_area"), Jump("view_bonkmenu")] hover_sound gui.hover_sound
-                frame:        
-                    area (520, 639, 202, 65)
-                    style "mas_extra_menu_frame"
-                    if persistent._mas_in_idle_mode == True:
-                        textbutton ("MP3 Player!"):
-                            xalign 0.5
-                            yalign 0.5
-                            action NullAction()
-                    else:
-                        textbutton ("MP3 Player!"):
-                            xalign 0.5
-                            yalign 0.5
-                            action [Hide("mas_extramenu_area"), Jump("MP3PlayerMenu")] hover_sound gui.hover_sound
-                       
-        else:
+        # OpenWorld Button is here. saw a bug with my button being duplicated twice only here.
+        if store.mas_submod_utils.isSubmodInstalled("Open World"):
             frame:
-                area (308, 639, 202, 65)
+                area (310, 550, 202, 65)
                 style "mas_extra_menu_frame"
-                if persistent._mas_in_idle_mode == True:
-                    textbutton ("MP3 Player!"):
+                if persistent._mas_in_idle_mode:
+                    textbutton ("Open World"):
                         xalign 0.5
                         yalign 0.5
                         action NullAction()
                 else:
-                    textbutton ("MP3 Player!"):
+                    textbutton ("Open World"):
                         xalign 0.5
                         yalign 0.5
-                        action [Hide("mas_extramenu_area"), Jump("MP3PlayerMenu")] hover_sound gui.hover_sound
+                        action [Hide("mas_extramenu_area"), Jump("view_OW")] hover_sound gui.hover_sound
+
+        # Surprisingly, BonkAMon had no duplicate buttons with mp3 button, so i done goof somehow but hey, a rewrite.
+        if store.mas_submod_utils.isSubmodInstalled("BonkAMon"):
+            frame:
+                area (310, 639, 202, 65)
+                style "mas_extra_menu_frame"
+                if persistent._mas_in_idle_mode:
+                    textbutton ("Bonk Monika"):
+                        xalign 0.5
+                        yalign 0.5
+                        action NullAction()
+                else:
+                    textbutton ("Bonk Monika"):
+                        xalign 0.5
+                        yalign 0.5
+                        action [Hide("mas_extramenu_area"), Jump("view_bonkmenu")] hover_sound gui.hover_sound
+
+        # MP3 Player button
+        $ mp3_area = get_mp3_button_area()
+        frame:
+            area mp3_area
+            style "mas_extra_menu_frame"
+            if persistent._mas_in_idle_mode:
+                textbutton ("MP3 Player!"):
+                    xalign 0.5
+                    yalign 0.5
+                    action NullAction()
+            else:
+                textbutton ("MP3 Player!"):
+                    xalign 0.5
+                    yalign 0.5
+                    action [Hide("mas_extramenu_area"), Jump("MP3PlayerMenu")] hover_sound gui.hover_sound
 
 screen mp3Player_menu():
     zorder 50
@@ -151,7 +146,12 @@ default music_is_playing = False
 default music_progress = 0.0        # current progress (0.0–1.0)
 default music_progress_time = 0.0   # elapsed seconds
 default music_total_time = 180.0    # estimated fake length in seconds (fake default)
-
+# Setting stuff for customisation for the users? funsies.
+default persistent.mp3_bg_color = "#ce0f85d2"  # Default pinkish background
+default persistent.mp3_accent_color = "#00cc99"
+default persistent.mp3_lcdtrip_color ="#d6ec97"
+default persistent.mp3.leftbar_color = "#00cc99"
+default persistent.mp3.rightbar_color = "#333333"
 
 init python:
     import os
@@ -282,7 +282,7 @@ screen mp3_player_screen():
 
     # Outer player casing
     frame:
-        background Solid("#ce0f85d2")
+        background Solid(persistent.mp3_bg_color)
         xalign 0.5
         yalign 0.5
         xsize 560
@@ -321,7 +321,7 @@ screen mp3_player_screen():
 
                 # === LCD-like strip: frame holds the background + padding ===
                 frame:
-                    background Solid("#d6ec97")
+                    background Solid(persistent.mp3_lcdtrip_color)
                     xalign 0.5
                     xpadding 10
                     ypadding 6
@@ -400,6 +400,22 @@ screen mp3_player_screen():
             yoffset 10
             action Show("mp3_info_popup")
 
+
+        # Settings button (next to ?)
+        textbutton "Settings":
+            text_size 23
+            text_color "#ffffff"
+            background Solid("#333333aa")
+            hover_background Solid("#00cc99")
+            xpos 1.0
+            xanchor 1.0
+            ypos 0.0
+            yanchor 0.0
+            xoffset -10  # slightly left of the ? button
+            yoffset 305
+            action Show("mp3_settings_popup")
+
+
     timer 1.0 action Function(music_update_progress, 1.0) repeat True
 
 
@@ -457,6 +473,70 @@ screen mp3_info_popup():
                 action Hide("mp3_info_popup")
 
 
+screen mp3_settings_popup():
+    modal True
+    zorder 200
+
+    frame:
+        background Solid("#111111dd")
+        xalign 0.5
+        yalign 0.5
+        xsize 460
+        ysize 450
+        xpadding 20
+        ypadding 20
+
+        vbox:
+            spacing 12
+            text "MP3 Player Settings" color "#66ffcc" size 26 xalign 0.5
+
+            text "Background Color:" color "#ffffff" size 18
+            hbox:
+                spacing 10
+                xalign 0.5
+                textbutton "Pink" action [SetField(persistent, "mp3_bg_color", "#ce0f85d2"), Function(renpy.save_persistent)] background Solid("#ce0f85") hover_background Solid("#ff5fb2")
+                textbutton "Green" action [SetField(persistent, "mp3_bg_color", "#3ea34caa"), Function(renpy.save_persistent)] background Solid("#3ea34c") hover_background Solid("#55cc66")
+                textbutton "Blue" action [SetField(persistent, "mp3_bg_color", "#3e6ea3aa"), Function(renpy.save_persistent)] background Solid("#3e6ea3") hover_background Solid("#5588cc")
+                textbutton "Gray" action [SetField(persistent, "mp3_bg_color", "#444444cc"), Function(renpy.save_persistent)] background Solid("#444444") hover_background Solid("#666666")
+
+            null height 5
+            text "Accent Color (for progress bar, hover, etc.):" color "#ffffff" size 18
+
+            hbox:
+                spacing 10
+                xalign 0.5
+                textbutton "Aqua" action [SetField(persistent, "mp3_accent_color", "#00cc99"), Function(renpy.save_persistent)] background Solid("#00cc99") hover_background Solid("#00ffbb")
+                textbutton "Gold" action [SetField(persistent, "mp3_accent_color", "#ffaa00"), Function(renpy.save_persistent)] background Solid("#ffaa00") hover_background Solid("#ffcc33")
+                textbutton "Purple" action [SetField(persistent, "mp3_accent_color", "#b066ff"), Function(renpy.save_persistent)] background Solid("#b066ff") hover_background Solid("#cc88ff")
+                textbutton "White" action [SetField(persistent, "mp3_accent_color", "#ffffff"), Function(renpy.save_persistent)] background Solid("#dddddd") hover_background Solid("#ffffff")
+
+            null height 5
+            text "LCD Strip Background (song name bar):" color "#ffffff" size 18
+            hbox:
+                spacing 10
+                xalign 0.5
+                textbutton "Black" action [SetField(persistent, "mp3_lcdtrip_color", "#000000"), Function(renpy.save_persistent)] background Solid("#000000") hover_background Solid("#202020c0")
+
+            textbutton "Reset to Default":
+                text_color "#ffffff"
+                background Solid("#333333")
+                hover_background Solid("#df1212")
+                xalign 0.5
+                action [
+                    SetField(persistent, "mp3_bg_color", "#ce0f85d2"),
+                    SetField(persistent, "mp3_accent_color", "#00cc99"),
+                    SetField(persistent, "mp3_lcdtrip_color", "#d6ec97"),
+                    Function(renpy.notify, "Colors reset to default!"),
+                    Function(renpy.save_persistent),
+                    renpy.restart_interaction
+                ]
+
+            textbutton "Close":
+                text_color "#ffffff"
+                background Solid("#333333")
+                hover_background Solid("#df1212")
+                xalign 0.5
+                action [Hide("mp3_settings_popup"), renpy.restart_interaction]
 
 
 
