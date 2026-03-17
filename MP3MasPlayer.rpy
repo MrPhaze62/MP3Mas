@@ -8,7 +8,7 @@ init -990 python:
         author="Phazeee",
         name="MP3MasPlayer",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
-        version="0.0.4",
+        version="0.0.5",
     )
 
 
@@ -148,10 +148,14 @@ default music_progress_time = 0.0   # elapsed seconds
 default music_total_time = 180.0    # estimated fake length in seconds (fake default)
 # Setting stuff for customisation for the users? funsies.
 default persistent.mp3_bg_color = "#ce0f85d2"  # Default pinkish background
-default persistent.mp3_accent_color = "#00cc99"
+default persistent.mp3_accent_color = "#00cc99" 
 default persistent.mp3_lcdtrip_color ="#d6ec97"
-default persistent.mp3.leftbar_color = "#00cc99"
-default persistent.mp3.rightbar_color = "#333333"
+default persistent.mp3_leftbar_color = "#00cc99"
+default persistent.mp3_rightbar_color = "#333333"
+
+
+
+
 
 init python:
     import os
@@ -335,7 +339,7 @@ screen mp3_player_screen():
                     xsize 400
                     ysize 10
                     xalign 0.5
-                    left_bar Frame(Solid("#00cc99"), 0, 0)
+                    left_bar Frame(Solid(persistent.mp3_accent_color), 0, 0)
                     right_bar Frame(Solid("#333333"), 0, 0)
                     thumb None
                 text get_progress_text() color "#ffffff" size 16 xalign 0.5
@@ -500,7 +504,7 @@ screen mp3_settings_popup():
                 textbutton "Gray" action [SetField(persistent, "mp3_bg_color", "#444444cc"), Function(renpy.save_persistent)] background Solid("#444444") hover_background Solid("#666666")
 
             null height 5
-            text "Accent Color (for progress bar, hover, etc.):" color "#ffffff" size 18
+            text "Accent Color (for progress bar only, for now):" color "#ffffff" size 18
 
             hbox:
                 spacing 10
@@ -516,6 +520,9 @@ screen mp3_settings_popup():
                 spacing 10
                 xalign 0.5
                 textbutton "Black" action [SetField(persistent, "mp3_lcdtrip_color", "#000000"), Function(renpy.save_persistent)] background Solid("#000000") hover_background Solid("#202020c0")
+                textbutton "White" action [SetField(persistent, "mp3_lcdtrip_color", "#ffffff"), Function(renpy.save_persistent)] background Solid("#ffffff") hover_background Solid("#776767c0")
+                textbutton "Red" action [SetField(persistent, "mp3_lcdtrip_color", "#ff0000"), Function(renpy.save_persistent)] background Solid("#ff0000") hover_background Solid("#ff8787c0")
+                textbutton "Orange" action [SetField(persistent, "mp3_lcdtrip_color", "#ff8a05"), Function(renpy.save_persistent)] background Solid("#ff8a05") hover_background Solid("#fdc763c0")
 
             textbutton "Reset to Default":
                 text_color "#ffffff"
@@ -528,7 +535,7 @@ screen mp3_settings_popup():
                     SetField(persistent, "mp3_lcdtrip_color", "#d6ec97"),
                     Function(renpy.notify, "Colors reset to default!"),
                     Function(renpy.save_persistent),
-                    renpy.restart_interaction
+                    Function(renpy.restart_interaction)
                 ]
 
             textbutton "Close":
@@ -536,7 +543,7 @@ screen mp3_settings_popup():
                 background Solid("#333333")
                 hover_background Solid("#df1212")
                 xalign 0.5
-                action [Hide("mp3_settings_popup"), renpy.restart_interaction]
+                action [Hide("mp3_settings_popup"), Function(renpy.restart_interaction)]
 
 
 
