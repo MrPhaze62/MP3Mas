@@ -8,7 +8,7 @@ init -990 python:
         author="Phazeee",
         name="MP3MasPlayer",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
-        version="0.0.6",
+        version="0.0.7",
     )
 
 
@@ -137,6 +137,7 @@ screen mp3Player_menu():
 # Below is the Player Logic. Seriously. mas crashed cuz this is volitile.
 
 define MUSIC_FOLDER = "submods/MP3Mas/music/"
+define LYRICS_FOLDER = "submods/MP3Mas/lyrics/"
 
 # Persistent variables
 default music_track_list = []
@@ -156,6 +157,11 @@ default persistent.mp3_rightbar_color = "#333333"
 default persistent.mp3_rainbow_mode = False
 default persistent.mp3_rainbow_index = 0
 
+# --- Lyrics (LRC) state ---
+# current_lyrics is a sorted list of (timestamp_seconds, line_text) tuples
+# loaded from LYRICS_FOLDER, matched by filename to the track that's playing.
+default current_lyrics = []
+default current_lyric_text = ""
 
 
 
@@ -163,6 +169,8 @@ default persistent.mp3_rainbow_index = 0
 init python:
     import os
     import time
+    import re
+    import io  # io.open() supports encoding= on both Python 2 and 3 - old Ren'Py (7.x) runs Python 2.
 
     SUPPORTED_AUDIO_EXTS = [".mp3", ".ogg", ".wav", ".flac", ".opus"]
 # progress bar simulation. 
@@ -179,6 +187,10 @@ init python:
             music_progress_time += dt
             if music_total_time > 0:
                 music_progress = min(1.0, music_progress_time / music_total_time)
+
+        # Piggyback the lyric-line lookup on the same tick, no extra timer needed.
+        get_current_lyric_line()
+
         renpy.restart_interaction()
 
     #init python:
@@ -204,9 +216,9 @@ init python:
 
     # Rainbow RGB colours for GamerRGB. Now Booplicate approved!
     rainbow_colors = [
-        "#ff0000", "#ff4400", "#ff8800", "#ffcc00", "#ffff00",
-        "#88ff00", "#00ff00", "#00ff88", "#00ffff", "#0088ff",
-        "#0000ff", "#8800ff", "#ff00ff", "#ff0088"
+        "#ff0000aa", "#ff4400aa", "#ff8800aa", "#ffcc00aa", "#ffff00aa",
+        "#88ff00aa", "#00ff00aa", "#00ff88aa", "#00ffffaa", "#0088ffaa",
+        "#0000ffaa", "#8800ffaa", "#ff00ffaa", "#ff0088aa"
     ]
 
     def rainbow_cycle():
@@ -217,6 +229,86 @@ init python:
             persistent.mp3_accent_color = rainbow_colors[(persistent.mp3_rainbow_index + 4) % len(rainbow_colors)]
             persistent.mp3_lcdtrip_color = rainbow_colors[(persistent.mp3_rainbow_index + 8) % len(rainbow_colors)]
         renpy.restart_interaction()
+
+
+    # - LRC (lyric) handling
+
+    # Basic and "enhanced" LRC tag matcher: [mm:ss.xx] or [mm:ss] / source taken from multiple renpy documentation and research.
+    LRC_TAG_RE = re.compile(r'\[(\d+):(\d+(?:\.\d+)?)\]')
+
+    def parse_lrc(path):
+        # Parses a .lrc file into a sorted list of (seconds, texts).
+        lyrics = []
+        try:
+            with io.open(path, "r", encoding="utf-8", errors="ignore") as f:
+                for raw_line in f:
+                    tags = LRC_TAG_RE.findall(raw_line)
+                    if not tags:
+                        continue  # metadata lines like [ar:], [ti:], or plain text - skip
+                    text = LRC_TAG_RE.sub("", raw_line).strip()
+                    for (mm, ss) in tags:
+                        t = int(mm) * 60 + float(ss)
+                        lyrics.append((t, text))
+        except Exception as e:
+            store.mas_utils.mas_log.info("[MP3MasPlayer] Failed to parse LRC '{}': {}".format(path, e))
+            return []
+
+        lyrics.sort(key=lambda pair: pair[0])
+        return lyrics
+
+    def music_load_lrc(track_filename):
+        # Looks for a matching file: "song.mp3" -> "song.lrc" in LYRICS_FOLDER
+        # (which is a separate folder from the audio files themselves, makes it easier).
+        global current_lyrics, current_lyric_text
+        current_lyrics = []
+        current_lyric_text = ""
+
+        base, _ext = os.path.splitext(track_filename)
+        lrc_relpath = LYRICS_FOLDER + base + ".lrc"
+
+        # Alternative local lyric file searching during multiple testing, it wouldn't find the friggin files, hit and a miss occasionally. now stable though.
+        lrc_path = None
+        try:
+            # Resolves through Ren'Py's archive/search-path system if the
+            # lyrics folder ever gets packed into an rpa.
+            lrc_path = renpy.loader.transfn(lrc_relpath)
+        except Exception:
+            lrc_path = None
+
+        if not lrc_path or not os.path.exists(lrc_path):
+            # This is the fallback, which checks the raw game directory directly.
+            fallback = os.path.join(config.basedir, "game", lrc_relpath)
+            if os.path.exists(fallback):
+                lrc_path = fallback
+            else:
+                lrc_path = None
+
+        if lrc_path:
+            current_lyrics = parse_lrc(lrc_path)
+            if current_lyrics:
+                store.mas_utils.mas_log.info("[MP3MasPlayer] Loaded {} lyric lines for {}".format(len(current_lyrics), track_filename))
+
+    def get_current_lyric_line():
+        # grabs the most recent lyric line for the current 'real' (simulated) playback position.
+        global current_lyric_text
+
+        if not current_lyrics:
+            current_lyric_text = ""
+            return current_lyric_text
+
+        pos = renpy.music.get_pos(channel="music")
+        if pos is None:
+            return current_lyric_text
+
+        line = ""
+        for (t, text) in current_lyrics:
+            if t <= pos:
+                line = text
+            else:
+                break
+
+        current_lyric_text = line
+        return current_lyric_text
 
 
 
@@ -234,9 +326,9 @@ init python:
             if not os.path.exists(full_path):
                 try:
                     os.makedirs(full_path)
-                    renpy.log("MP3Mas: Created missing music folder at: {}".format(full_path))
+                    store.mas_utils.mas_log.info("[MP3MasPlayer] Created missing music folder at: {}".format(full_path))
                 except Exception as e:
-                    renpy.log("MP3Mas: Failed to create folder: {}".format(e))
+                    store.mas_utils.mas_log.info("[MP3MasPlayer] Failed to create music folder: {}".format(e))
             music_track_list = []
             return music_track_list
 
@@ -249,6 +341,21 @@ init python:
             music_track_list.sort()
         else:
             music_track_list = []
+
+        # We now make sure the lyrics folder exists, same treatment as the music folder above, else we're still doomed.
+        try:
+            lyrics_path = renpy.loader.transfn(LYRICS_FOLDER)
+        except Exception:
+            lyrics_path = None
+
+        lyrics_full_path = os.path.join(config.basedir, "game", "submods", "MP3Mas", "lyrics")
+        if not lyrics_path and not os.path.exists(lyrics_full_path):
+            try:
+                os.makedirs(lyrics_full_path)
+                store.mas_utils.mas_log.info("[MP3MasPlayer] Created missing lyrics folder at: {}".format(lyrics_full_path))
+            except Exception as e:
+                store.mas_utils.mas_log.info("[MP3MasPlayer] Failed to create lyrics folder: {}".format(e))
+
         return music_track_list
 
     def music_play(index=None):
@@ -269,6 +376,7 @@ init python:
         else:
             file = MUSIC_FOLDER + music_track_list[music_current_index]
             renpy.music.play(file, channel="music", loop=False)
+            music_load_lrc(music_track_list[music_current_index])
     
         music_is_playing = True
 
@@ -361,6 +469,15 @@ screen mp3_player_screen():
                     # Playback lines here.
                     $ display_line = status_text + " " + current_track #if status_text != "Stopped" else "Song is stopped!"
                     text display_line color "#ffffff" size 18 xalign 0.5
+
+                # Lyric line, synced against 'real' playback position (this only shows if a matching .lrc file was found in the lyrics folder).
+                if current_lyric_text:
+                    frame:
+                        background Solid("#00000066")
+                        xalign 0.5
+                        xpadding 10
+                        ypadding 4
+                        text current_lyric_text color persistent.mp3_lcdtrip_color size 16 xalign 0.5 # For now, this color is tied to the LCD COLOR STRIP till i get customisation for it.
 
                 # a simulated progress bar UI is here, now fake in 720p quality! 
                 bar:
@@ -502,6 +619,7 @@ screen mp3_info_popup():
             text "• Use the Play, Pause, Stop, Next, and Prev buttons to control playback." color "#ffffff" size 18
             text "• Monika will remember your last played song!" color "#ffffff" size 18
             text "• The Progress Bar is Simulated/fake. it will always end at 3:00, perhaps a future update may make it real." color "#ffffff" size 18
+            text "• Add a matching .lrc file (same name as the song) in game/submods/MP3Mas/lyrics/ for synced lyrics!" color "#ffffff" size 18
 
             textbutton "Close":
                 text_color "#ffffff"
