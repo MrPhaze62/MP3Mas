@@ -8,7 +8,7 @@ init -990 python:
         author="Phazeee",
         name="MP3MasPlayer",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
-        version="0.0.7",
+        version="0.0.7b",
     )
 
 
@@ -156,6 +156,10 @@ default persistent.mp3_rightbar_color = "#333333"
 # GamerRGB mode heheh. 
 default persistent.mp3_rainbow_mode = False
 default persistent.mp3_rainbow_index = 0
+# Theme: "custom" = the color-picker skin below, "mas" = matches MAS's own UI chrome (hkb_button/mas_extra_menu_frame styles).
+default persistent.mp3_theme = "custom"
+# Only relevant when mp3_theme == "mas": whether the panel gets a dark backing or stays fully transparent (just the border).
+default persistent.mp3_mas_bg_dark = False
 
 # --- Lyrics (LRC) state ---
 # current_lyrics is a sorted list of (timestamp_seconds, line_text) tuples
@@ -170,7 +174,7 @@ init python:
     import os
     import time
     import re
-    import io  # io.open() supports encoding= on both Python 2 and 3 - old Ren'Py (7.x) runs Python 2.
+    import io  # io.open() supports encoding = on both Python 2 and 3 - old Ren'Py (7.x) runs Python 2.
 
     SUPPORTED_AUDIO_EXTS = [".mp3", ".ogg", ".wav", ".flac", ".opus"]
 # progress bar simulation. 
@@ -228,6 +232,15 @@ init python:
             persistent.mp3_bg_color = rainbow_colors[persistent.mp3_rainbow_index]
             persistent.mp3_accent_color = rainbow_colors[(persistent.mp3_rainbow_index + 4) % len(rainbow_colors)]
             persistent.mp3_lcdtrip_color = rainbow_colors[(persistent.mp3_rainbow_index + 8) % len(rainbow_colors)]
+        renpy.restart_interaction()
+
+    # Theme toggle - swaps between the custom color-picker skin and MAS's own UI chrome.
+    def toggle_mp3_theme():
+        if persistent.mp3_theme == "mas":
+            persistent.mp3_theme = "custom"
+        else:
+            persistent.mp3_theme = "mas"
+        renpy.save_persistent()
         renpy.restart_interaction()
 
 
@@ -421,151 +434,245 @@ screen mp3_player_screen():
     modal True
     zorder 100
 
-    # Outer player casing
-    frame:
-        background Solid(persistent.mp3_bg_color)
-        xalign 0.5
-        yalign 0.5
-        xsize 560
-        ysize 380
-        xpadding 25
-        ypadding 25
+    $ is_mas_theme = (persistent.mp3_theme == "mas")
 
-        vbox:
-            spacing 15
+    if is_mas_theme:
+        # ================= MAS-styled skin =================
+        # Reuses the same "hkb_button" / "mas_extra_menu_frame" styles the
+        # game's own extra-menu buttons use, so this matches MAS's UI chrome
+        # instead of approximating it with hardcoded colors.
+        frame:
+            style "mas_extra_menu_frame"
+            if persistent.mp3_mas_bg_dark:
+                background Solid("#00000099")
             xalign 0.5
             yalign 0.5
+            xsize 700
+            ysize 400
+            xpadding 20
+            ypadding 20
 
-            text "Monika's MP3 Player" color "#66ffcc" size 26 xalign 0.5
+            vbox:
+                spacing 12
+                xalign 0.5
+                yalign 0.5
+                style_prefix "hkb"
 
-            if music_track_list and 0 <= music_current_index < len(music_track_list):
-                $ current_track = music_track_list[music_current_index]
+                text "Monika's MP3 Player" size 26 xalign 0.5
 
-                # Determine status and colour. Makes it easier to tell whats being played and paused during playback.
-                $ status_text = "Stopped"
-                $ status_color = "#ff8080"
+                if music_track_list and 0 <= music_current_index < len(music_track_list):
+                    $ current_track = music_track_list[music_current_index]
 
-                # renpy.music.is_playing() returns True if channel has audio (playing or paused) - thanks renpy, i've to remind myself here multiple times. for audio equals nightmare.
-                if renpy.music.is_playing(channel="music"):
-                    if music_is_playing:
-                        $ status_text = "Now Playing:"
-                        $ status_color = "#00cc99"
+                    $ status_text = "Stopped"
+                    if renpy.music.is_playing(channel="music"):
+                        if music_is_playing:
+                            $ status_text = "Now Playing:"
+                        else:
+                            $ status_text = "Paused Song:"
                     else:
-                        $ status_text = "Paused Song:"
-                        $ status_color = "#ffcc00"
+                        $ status_text = "Stopped Song:"
+
+                    text status_text size 20 xalign 0.5
+                    text current_track size 16 xalign 0.5
+
+                    if current_lyric_text:
+                        text current_lyric_text size 16 xalign 0.5
+
+                    bar:
+                        value music_progress
+                        xsize 400
+                        ysize 10
+                        xalign 0.5
+                    text get_progress_text() size 16 xalign 0.5
+
+                    hbox:
+                        spacing 6
+                        xalign 0.5
+
+                        textbutton "Prev" text_size 20 action Function(music_prev)
+                        textbutton "Play" text_size 20 action Function(music_play)
+                        textbutton "Pause" text_size 20 action Function(music_pause)
+                        textbutton "Stop" text_size 20 action Function(music_stop)
+                        textbutton "Next" text_size 20 action Function(music_next)
+
                 else:
-                    $ status_text = "Stopped Song:"
+                    text "No tracks found in your MP3 folder! Please make sure there are songs in your game/submods/MP3Mas/music folder" size 16 xalign 0.5
+
+                null height 6
+
+                textbutton "Close":
+                    text_size 20
+                    xalign 0.5
+                    action [Hide("mp3_player_screen"), Jump("MP3Retrun")]
+
+            textbutton "?":
+                style "hkb_button"
+                text_size 28
+                xpos 1.0
+                xanchor 1.0
+                ypos 0.0
+                yanchor 0.0
+                xoffset -10
+                yoffset 10
+                action Show("mp3_info_popup")
+
+            textbutton "Settings":
+                style "hkb_button"
+                text_size 23
+                xpos 1.0
+                xanchor 1.0
+                ypos 0.0
+                yanchor 0.0
+                xoffset -10
+                yoffset 305
+                action Show("mp3_settings_popup")
+
+    else:
+        # ================= Custom color-picker skin =================
+        frame:
+            background Solid(persistent.mp3_bg_color)
+            xalign 0.5
+            yalign 0.5
+            xsize 560
+            ysize 380
+            xpadding 25
+            ypadding 25
+
+            vbox:
+                spacing 15
+                xalign 0.5
+                yalign 0.5
+
+                text "Monika's MP3 Player" color "#66ffcc" size 26 xalign 0.5
+
+                if music_track_list and 0 <= music_current_index < len(music_track_list):
+                    $ current_track = music_track_list[music_current_index]
+
+                    # Determine status and colour. Makes it easier to tell whats being played and paused during playback.
+                    $ status_text = "Stopped"
                     $ status_color = "#ff8080"
 
-                # Show status label
-                text status_text color status_color size 20 xalign 0.5
+                    # renpy.music.is_playing() returns True if channel has audio (playing or paused) - thanks renpy, i've to remind myself here multiple times. for audio equals nightmare.
+                    if renpy.music.is_playing(channel="music"):
+                        if music_is_playing:
+                            $ status_text = "Now Playing:"
+                            $ status_color = "#00cc99"
+                        else:
+                            $ status_text = "Paused Song:"
+                            $ status_color = "#ffcc00"
+                    else:
+                        $ status_text = "Stopped Song:"
+                        $ status_color = "#ff8080"
 
-                # === LCD-like strip: frame holds the background + padding ===
-                frame:
-                    background Solid(persistent.mp3_lcdtrip_color)
-                    xalign 0.5
-                    xpadding 10
-                    ypadding 6
-                    # Playback lines here.
-                    $ display_line = status_text + " " + current_track #if status_text != "Stopped" else "Song is stopped!"
-                    text display_line color "#ffffff" size 18 xalign 0.5
+                    # Show status label
+                    text status_text color status_color size 20 xalign 0.5
 
-                # Lyric line, synced against 'real' playback position (this only shows if a matching .lrc file was found in the lyrics folder).
-                if current_lyric_text:
+                    # === LCD-like strip: frame holds the background + padding ===
                     frame:
-                        background Solid("#00000066")
+                        background Solid(persistent.mp3_lcdtrip_color)
                         xalign 0.5
                         xpadding 10
-                        ypadding 4
-                        text current_lyric_text color persistent.mp3_lcdtrip_color size 16 xalign 0.5 # For now, this color is tied to the LCD COLOR STRIP till i get customisation for it.
+                        ypadding 6
+                        # Playback lines here.
+                        $ display_line = status_text + " " + current_track #if status_text != "Stopped" else "Song is stopped!"
+                        text display_line color "#ffffff" size 18 xalign 0.5
 
-                # a simulated progress bar UI is here, now fake in 720p quality! 
-                bar:
-                    value music_progress
-                    xsize 400
-                    ysize 10
+                    # Lyric line, synced against 'real' playback position (this only shows if a matching .lrc file was found in the lyrics folder).
+                    if current_lyric_text:
+                        frame:
+                            background Solid("#00000066")
+                            xalign 0.5
+                            xpadding 10
+                            ypadding 4
+                            text current_lyric_text color persistent.mp3_lcdtrip_color size 16 xalign 0.5 # For now, this color is tied to the LCD COLOR STRIP till i get customisation for it.
+
+                    # a simulated progress bar UI is here, now fake in 720p quality! 
+                    bar:
+                        value music_progress
+                        xsize 400
+                        ysize 10
+                        xalign 0.5
+                        left_bar Frame(Solid(persistent.mp3_accent_color), 0, 0)
+                        right_bar Frame(Solid("#333333"), 0, 0)
+                        thumb None
+                    text get_progress_text() color "#ffffff" size 16 xalign 0.5
+
+                    hbox:
+                        spacing 12
+                        xalign 0.5
+
+                        textbutton "Prev":
+                            text_color "#ffffff"
+                            background Solid("#333333")
+                            hover_background Solid("#00cc99")
+                            action Function(music_prev)
+
+                        textbutton "Play":
+                            text_color "#ffffff"
+                            background Solid("#333333")
+                            hover_background Solid("#00cc99")
+                            action Function(music_play)
+
+                        textbutton "Pause":
+                            text_color "#ffffff"
+                            background Solid("#333333")
+                            hover_background Solid("#00cc99")
+                            action Function(music_pause)
+
+                        textbutton "Stop":
+                            text_color "#ffffff"
+                            background Solid("#333333")
+                            hover_background Solid("#00cc99")
+                            action Function(music_stop)
+
+                        textbutton "Next":
+                            text_color "#ffffff"
+                            background Solid("#333333")
+                            hover_background Solid("#00cc99")
+                            action Function(music_next)
+
+                else:
+                    text "No tracks found in your MP3 folder! Please make sure there are songs in your game/submods/MP3Mas/music folder" color "#ff8080" size 16 xalign 0.5
+
+                null height 10
+
+                textbutton "Close":
+                    text_color "#ffffff"
+                    background Solid("#333333")
+                    hover_background Solid("#df1212")
                     xalign 0.5
-                    left_bar Frame(Solid(persistent.mp3_accent_color), 0, 0)
-                    right_bar Frame(Solid("#333333"), 0, 0)
-                    thumb None
-                text get_progress_text() color "#ffffff" size 16 xalign 0.5
+                    action [Hide("mp3_player_screen"), Jump("MP3Retrun")]
 
-                hbox:
-                    spacing 12
-                    xalign 0.5
-
-                    textbutton "Prev":
-                        text_color "#ffffff"
-                        background Solid("#333333")
-                        hover_background Solid("#00cc99")
-                        action Function(music_prev)
-
-                    textbutton "Play":
-                        text_color "#ffffff"
-                        background Solid("#333333")
-                        hover_background Solid("#00cc99")
-                        action Function(music_play)
-
-                    textbutton "Pause":
-                        text_color "#ffffff"
-                        background Solid("#333333")
-                        hover_background Solid("#00cc99")
-                        action Function(music_pause)
-
-                    textbutton "Stop":
-                        text_color "#ffffff"
-                        background Solid("#333333")
-                        hover_background Solid("#00cc99")
-                        action Function(music_stop)
-
-                    textbutton "Next":
-                        text_color "#ffffff"
-                        background Solid("#333333")
-                        hover_background Solid("#00cc99")
-                        action Function(music_next)
-
-            else:
-                text "No tracks found in your MP3 folder! Please make sure there are songs in your game/submods/MP3Mas/music folder" color "#ff8080" size 16 xalign 0.5
-
-            null height 10
-
-            textbutton "Close":
+            # Info button in top right corner... not the left. where the button shot right off the screen beyond the stratosphere... the trauma.
+            textbutton "?":
+                text_size 28
                 text_color "#ffffff"
-                background Solid("#333333")
-                hover_background Solid("#df1212")
-                xalign 0.5
-                action [Hide("mp3_player_screen"), Jump("MP3Retrun")]
-
-        # Info button in top right corner... not the left. where the button shot right off the screen beyond the stratosphere... the trauma.
-        textbutton "?":
-            text_size 28
-            text_color "#ffffff"
-            background Solid("#333333aa")
-            hover_background Solid("#00cc99")
-            xpos 1.0
-            xanchor 1.0
-            ypos 0.0
-            yanchor 0.0
-            xoffset -10
-            yoffset 10
-            action Show("mp3_info_popup")
+                background Solid("#333333aa")
+                hover_background Solid("#00cc99")
+                xpos 1.0
+                xanchor 1.0
+                ypos 0.0
+                yanchor 0.0
+                xoffset -10
+                yoffset 10
+                action Show("mp3_info_popup")
 
 
-        # Settings button (next to ?)
-        textbutton "Settings":
-            text_size 23
-            text_color "#ffffff"
-            background Solid("#333333aa")
-            hover_background Solid("#00cc99")
-            xpos 1.0
-            xanchor 1.0
-            ypos 0.0
-            yanchor 0.0
-            xoffset -10  # slightly left of the ? button
-            yoffset 305
-            action Show("mp3_settings_popup")
+            # Settings button (next to ?)
+            textbutton "Settings":
+                text_size 23
+                text_color "#ffffff"
+                background Solid("#333333aa")
+                hover_background Solid("#00cc99")
+                xpos 1.0
+                xanchor 1.0
+                ypos 0.0
+                yanchor 0.0
+                xoffset -10  # slightly left of the ? button
+                yoffset 305
+                action Show("mp3_settings_popup")
 
-    if persistent.mp3_rainbow_mode:
+    if persistent.mp3_rainbow_mode and not is_mas_theme:
         timer 0.15 action Function(rainbow_cycle) repeat True
 
     timer 1.0 action Function(music_update_progress, 1.0) repeat True
@@ -620,6 +727,7 @@ screen mp3_info_popup():
             text "• Monika will remember your last played song!" color "#ffffff" size 18
             text "• The Progress Bar is Simulated/fake. it will always end at 3:00, perhaps a future update may make it real." color "#ffffff" size 18
             text "• Add a matching .lrc file (same name as the song) in game/submods/MP3Mas/lyrics/ for synced lyrics!" color "#ffffff" size 18
+            text "• Switch between the custom skin and MAS's own UI look from Settings > Theme." color "#ffffff" size 18
 
             textbutton "Close":
                 text_color "#ffffff"
@@ -638,7 +746,7 @@ screen mp3_settings_popup():
         xalign 0.5
         yalign 0.5
         xsize 560
-        ysize 500
+        ysize 560
         xpadding 25
         ypadding 20
 
@@ -647,6 +755,38 @@ screen mp3_settings_popup():
             xalign 0.5
 
             text "MP3 Player Settings" color "#66ffcc" size 26 xalign 0.5
+
+            # Divider
+            frame:
+                background Solid("#ffffff22")
+                xsize 510
+                ysize 2
+                xalign 0.5
+
+            # Theme toggle
+            vbox:
+                spacing 6
+                xalign 0.5
+                $ theme_label = "Theme: MAS UI" if persistent.mp3_theme == "mas" else "Theme: Custom Skin"
+                $ theme_bg = Solid("#3e6ea3") if persistent.mp3_theme == "mas" else Solid("#333333")
+                text "Theme:" color "#aaaaaa" size 16 xalign 0.5
+                textbutton theme_label:
+                    text_color "#ffffff"
+                    background theme_bg
+                    hover_background Solid("#5588cc")
+                    xalign 0.5
+                    action Function(toggle_mp3_theme)
+                text "(Colors below only apply to the Custom Skin theme)" color "#666666" size 12 xalign 0.5
+
+                if persistent.mp3_theme == "mas":
+                    $ mas_bg_label = "Panel: Dark Backing" if persistent.mp3_mas_bg_dark else "Panel: Transparent"
+                    $ mas_bg_bg = Solid("#3e6ea3") if persistent.mp3_mas_bg_dark else Solid("#333333")
+                    textbutton mas_bg_label:
+                        text_color "#ffffff"
+                        background mas_bg_bg
+                        hover_background Solid("#5588cc")
+                        xalign 0.5
+                        action [ToggleField(persistent, "mp3_mas_bg_dark"), Function(renpy.save_persistent), Function(renpy.restart_interaction)]
 
             # Divider
             frame:
