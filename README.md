@@ -21,4 +21,6 @@ Submods/MP3Mas/lyrics (Although it should have the folder made for you automatic
 
 The main branch is the stable version. There is a nightly/Beta branch where i often make changes onto, which you can install as well. but typically the release build (when i do release it) is the final stable build. 
 
+Please use your legally acquired owned songs to play your music. This does not ship actual songs, nor encourage you to engage in piracy. I am not responsible whatsoever so should you use this.
+
 eggjoy. STILL A WIP. But finally a first official public release.
