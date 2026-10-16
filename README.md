@@ -5,6 +5,8 @@ I made my own mp3 Player submod for Monika After Story.
 
 It contains customization, themes and has Lyric support!
 
+Download it here: https://github.com/MrPhaze62/MP3Mas/releases/latest
+
 To add music, add a folder called music in Submods/MP3Mas 
 So it looks like:
 Submods/MP3Mas/music
@@ -12,7 +14,6 @@ Submods/MP3Mas/music
 Now add your music, supports .ogg/mp3/wav/flac/opus
 
 You can find the MP3Player inside the extra button the place where you find the Zoom Bar and BonkAMon and OpenWorld Submods respectively (if you have them)
-
 
 You can now add Lyrics (.Lrc) file into the player! the lyric file must match the song name! 
 To add music, add a folder called lyrics in Submods/MP3Mas 
