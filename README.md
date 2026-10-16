@@ -14,7 +14,7 @@ Now add your music, supports .ogg/mp3/wav/flac/opus
 You can find the MP3Player inside the extra button the place where you find the Zoom Bar and BonkAMon and OpenWorld Submods respectively (if you have them)
 
 
-You can now add Lyrics (.Lrc) file into the player!
+You can now add Lyrics (.Lrc) file into the player! the lyric file must match the song name! 
 To add music, add a folder called lyrics in Submods/MP3Mas 
 So it looks like:
 Submods/MP3Mas/lyrics (Although it should have the folder made for you automatically.)
