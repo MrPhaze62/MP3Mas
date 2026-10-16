@@ -6,10 +6,22 @@
 init -990 python:
     store.mas_submod_utils.Submod(
         author="Phazeee",
-        name="MP3MasPlayer",
+        name="MP3Mas",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
         version="0.0.8",
     )
+
+
+
+# Register the updater
+init -989 python:
+    if store.mas_submod_utils.isSubmodInstalled("Submod Updater Plugin"):
+        store.sup_utils.SubmodUpdater(
+            submod="MP3Mas",
+            user_name="MrPhaze62",
+            repository_name="MP3Mas",
+            #extraction_depth=1
+        )
 
 
 init 10001 python:
