@@ -8,7 +8,7 @@ init -990 python:
         author="Phazeee",
         name="MP3MasPlayer",
         description="Mp3 Styled MAS Player! Listen to music with her you absolute gamer.",
-        version="0.0.7b",
+        version="0.0.8",
     )
 
 
@@ -437,10 +437,7 @@ screen mp3_player_screen():
     $ is_mas_theme = (persistent.mp3_theme == "mas")
 
     if is_mas_theme:
-        # ================= MAS-styled skin =================
-        # Reuses the same "hkb_button" / "mas_extra_menu_frame" styles the
-        # game's own extra-menu buttons use, so this matches MAS's UI chrome
-        # instead of approximating it with hardcoded colors.
+        # - MAS-styled skin/theme
         frame:
             style "mas_extra_menu_frame"
             if persistent.mp3_mas_bg_dark:
@@ -528,7 +525,7 @@ screen mp3_player_screen():
                 action Show("mp3_settings_popup")
 
     else:
-        # ================= Custom color-picker skin =================
+        # - Custom color-picker skin 
         frame:
             background Solid(persistent.mp3_bg_color)
             xalign 0.5
@@ -737,6 +734,18 @@ screen mp3_info_popup():
                 action Hide("mp3_info_popup")
 
 
+
+
+
+screen mp3_settings_divider():
+    frame:
+        background Solid("#ffffff22")
+        xsize 500
+        ysize 2
+        xalign 0.5
+
+
+
 screen mp3_settings_popup():
     modal True
     zorder 200
@@ -752,143 +761,135 @@ screen mp3_settings_popup():
 
         vbox:
             spacing 10
-            xalign 0.5
+            xfill True
 
             text "MP3 Player Settings" color "#66ffcc" size 26 xalign 0.5
 
-            # Divider
-            frame:
-                background Solid("#ffffff22")
-                xsize 510
-                ysize 2
-                xalign 0.5
+            # Scrollable body: everything between the title and the bottom buttons.
+            viewport:
+                xfill True
+                ymaximum 500
+                mousewheel True
+                scrollbars "vertical"
 
-            # Theme toggle
-            vbox:
-                spacing 6
-                xalign 0.5
-                $ theme_label = "Theme: MAS UI" if persistent.mp3_theme == "mas" else "Theme: Custom Skin"
-                $ theme_bg = Solid("#3e6ea3") if persistent.mp3_theme == "mas" else Solid("#333333")
-                text "Theme:" color "#aaaaaa" size 16 xalign 0.5
-                textbutton theme_label:
-                    text_color "#ffffff"
-                    background theme_bg
-                    hover_background Solid("#5588cc")
-                    xalign 0.5
-                    action Function(toggle_mp3_theme)
-                text "(Colors below only apply to the Custom Skin theme)" color "#666666" size 12 xalign 0.5
+                vbox:
+                    spacing 10
+                    xfill True
 
-                if persistent.mp3_theme == "mas":
-                    $ mas_bg_label = "Panel: Dark Backing" if persistent.mp3_mas_bg_dark else "Panel: Transparent"
-                    $ mas_bg_bg = Solid("#3e6ea3") if persistent.mp3_mas_bg_dark else Solid("#333333")
-                    textbutton mas_bg_label:
-                        text_color "#ffffff"
-                        background mas_bg_bg
-                        hover_background Solid("#5588cc")
+                    use mp3_settings_divider
+
+                    # Theme toggle
+                    vbox:
+                        spacing 6
                         xalign 0.5
-                        action [ToggleField(persistent, "mp3_mas_bg_dark"), Function(renpy.save_persistent), Function(renpy.restart_interaction)]
+                        $ theme_label = "Theme: MAS UI" if persistent.mp3_theme == "mas" else "Theme: Custom Skin"
+                        $ theme_bg = Solid("#3e6ea3") if persistent.mp3_theme == "mas" else Solid("#333333")
+                        text "Theme:" color "#aaaaaa" size 16 xalign 0.5
+                        textbutton theme_label:
+                            text_color "#ffffff"
+                            background theme_bg
+                            hover_background Solid("#5588cc")
+                            xalign 0.5
+                            action Function(toggle_mp3_theme)
+                        text "(Colors below only apply to the Custom Skin theme)" color "#666666" size 12 xalign 0.5
 
-            # Divider
-            frame:
-                background Solid("#ffffff22")
-                xsize 510
-                ysize 2
-                xalign 0.5
+                        if persistent.mp3_theme == "mas":
+                            $ mas_bg_label = "Panel: Dark Backing" if persistent.mp3_mas_bg_dark else "Panel: Transparent"
+                            $ mas_bg_bg = Solid("#3e6ea3") if persistent.mp3_mas_bg_dark else Solid("#333333")
+                            textbutton mas_bg_label:
+                                text_color "#ffffff"
+                                background mas_bg_bg
+                                hover_background Solid("#5588cc")
+                                xalign 0.5
+                                action [ToggleField(persistent, "mp3_mas_bg_dark"), Function(renpy.save_persistent), Function(renpy.restart_interaction)]
 
-            # BG and Accent/SliderBar colour side by side
-            hbox:
-                spacing 20
-                xalign 0.5
+                    use mp3_settings_divider
 
-                vbox:
-                    spacing 6
-                    text "Background:" color "#aaaaaa" size 16 xalign 0.5
+                    # Background and Accent colour side by side
                     hbox:
-                        spacing 8
-                        textbutton "Pink" action [SetField(persistent, "mp3_bg_color", "#ce0f85d2"), Function(renpy.save_persistent)] background Solid("#ce0f85") hover_background Solid("#ff5fb2")
-                        textbutton "Green" action [SetField(persistent, "mp3_bg_color", "#3ea34caa"), Function(renpy.save_persistent)] background Solid("#3ea34c") hover_background Solid("#55cc66")
-                    hbox:
-                        spacing 8
-                        textbutton "Blue" action [SetField(persistent, "mp3_bg_color", "#3e6ea3aa"), Function(renpy.save_persistent)] background Solid("#3e6ea3") hover_background Solid("#5588cc")
-                        textbutton "Gray" action [SetField(persistent, "mp3_bg_color", "#444444cc"), Function(renpy.save_persistent)] background Solid("#444444") hover_background Solid("#666666")
+                        spacing 20
+                        xalign 0.5
 
-                vbox:
-                    spacing 6
-                    text "Accent (currently for SliderBar only, for now):" color "#aaaaaa" size 16 xalign 0.5
-                    hbox:
-                        spacing 8
-                        textbutton "Aqua" action [SetField(persistent, "mp3_accent_color", "#00cc99"), Function(renpy.save_persistent)] background Solid("#00cc99") hover_background Solid("#00ffbb")
-                        textbutton "Gold" action [SetField(persistent, "mp3_accent_color", "#ffaa00"), Function(renpy.save_persistent)] background Solid("#ffaa00") hover_background Solid("#ffcc33")
-                    hbox:
-                        spacing 8
-                        textbutton "Purple" action [SetField(persistent, "mp3_accent_color", "#b066ff"), Function(renpy.save_persistent)] background Solid("#b066ff") hover_background Solid("#cc88ff")
-                        textbutton "White" action [SetField(persistent, "mp3_accent_color", "#ffffff"), Function(renpy.save_persistent)] background Solid("#dddddd") hover_background Solid("#ffffff")
+                        vbox:
+                            spacing 6
+                            text "Background:" color "#aaaaaa" size 16 xalign 0.5
+                            hbox:
+                                spacing 8
+                                textbutton "Pink" action [SetField(persistent, "mp3_bg_color", "#ce0f85d2"), Function(renpy.save_persistent)] background Solid("#ce0f85") hover_background Solid("#ff5fb2")
+                                textbutton "Green" action [SetField(persistent, "mp3_bg_color", "#3ea34caa"), Function(renpy.save_persistent)] background Solid("#3ea34c") hover_background Solid("#55cc66")
+                            hbox:
+                                spacing 8
+                                textbutton "Blue" action [SetField(persistent, "mp3_bg_color", "#3e6ea3aa"), Function(renpy.save_persistent)] background Solid("#3e6ea3") hover_background Solid("#5588cc")
+                                textbutton "Gray" action [SetField(persistent, "mp3_bg_color", "#444444cc"), Function(renpy.save_persistent)] background Solid("#444444") hover_background Solid("#666666")
 
-            # Divider
-            frame:
-                background Solid("#ffffff22")
-                xsize 510
-                ysize 2
-                xalign 0.5
+                        vbox:
+                            spacing 6
+                            # Shortened so it no longer runs into the Background column.
+                            text "Accent (slider bar):" color "#aaaaaa" size 16 xalign 0.5
+                            hbox:
+                                spacing 8
+                                textbutton "Aqua" action [SetField(persistent, "mp3_accent_color", "#00cc99"), Function(renpy.save_persistent)] background Solid("#00cc99") hover_background Solid("#00ffbb")
+                                textbutton "Gold" action [SetField(persistent, "mp3_accent_color", "#ffaa00"), Function(renpy.save_persistent)] background Solid("#ffaa00") hover_background Solid("#ffcc33")
+                            hbox:
+                                spacing 8
+                                textbutton "Purple" action [SetField(persistent, "mp3_accent_color", "#b066ff"), Function(renpy.save_persistent)] background Solid("#b066ff") hover_background Solid("#cc88ff")
+                                textbutton "White" action [SetField(persistent, "mp3_accent_color", "#ffffff"), Function(renpy.save_persistent)] background Solid("#dddddd") hover_background Solid("#ffffff")
 
-            # LCD strip row
-            vbox:
-                spacing 6
-                xalign 0.5
-                text "LCD Strip:" color "#aaaaaa" size 16 xalign 0.5
-                hbox:
-                    spacing 8
-                    xalign 0.5
-                    textbutton "Black" action [SetField(persistent, "mp3_lcdtrip_color", "#000000"), Function(renpy.save_persistent)] background Solid("#000000") hover_background Solid("#202020c0")
-                    textbutton "White" action [SetField(persistent, "mp3_lcdtrip_color", "#ffffff"), Function(renpy.save_persistent)] background Solid("#ffffff") hover_background Solid("#776767c0")
-                    textbutton "Red" action [SetField(persistent, "mp3_lcdtrip_color", "#ff0000"), Function(renpy.save_persistent)] background Solid("#ff0000") hover_background Solid("#ff8787c0")
-                    textbutton "Orange" action [SetField(persistent, "mp3_lcdtrip_color", "#ff8a05"), Function(renpy.save_persistent)] background Solid("#ff8a05") hover_background Solid("#fdc763c0")
+                    use mp3_settings_divider
 
-            # Divider
-            frame:
-                background Solid("#ffffff22")
-                xsize 510
-                ysize 2
-                xalign 0.5
+                    # LCD strip row
+                    vbox:
+                        spacing 6
+                        xalign 0.5
+                        text "LCD Strip:" color "#aaaaaa" size 16 xalign 0.5
+                        hbox:
+                            spacing 8
+                            xalign 0.5
+                            textbutton "Black" action [SetField(persistent, "mp3_lcdtrip_color", "#000000"), Function(renpy.save_persistent)] background Solid("#000000") hover_background Solid("#202020c0")
+                            textbutton "White" action [SetField(persistent, "mp3_lcdtrip_color", "#ffffff"), Function(renpy.save_persistent)] background Solid("#ffffff") hover_background Solid("#776767c0")
+                            textbutton "Red" action [SetField(persistent, "mp3_lcdtrip_color", "#ff0000"), Function(renpy.save_persistent)] background Solid("#ff0000") hover_background Solid("#ff8787c0")
+                            textbutton "Orange" action [SetField(persistent, "mp3_lcdtrip_color", "#ff8a05"), Function(renpy.save_persistent)] background Solid("#ff8a05") hover_background Solid("#fdc763c0")
 
-            # Volume
-            vbox:
-                spacing 4
-                xalign 0.5
-                text "Volume:" color "#aaaaaa" size 16 xalign 0.5
-                bar:
-                    adjustment ui.adjustment(range=1.0, value=persistent.mp3_volume, changed=music_set_volume)
-                    xsize 400
-                    ysize 20
-                    xalign 0.5
-                    left_bar Frame(Solid("#555555"), 0, 0)
-                    right_bar Frame(Solid("#333333"), 0, 0)
-                    thumb Frame(Solid("#ffffff"), 0, 0)
-                hbox:
-                    xsize 400
-                    xalign 0.5
-                    text "0%" color "#666666" size 13 xalign 0.0
-                    text "50%" color "#666666" size 13 xalign 0.5
-                    text "100%" color "#666666" size 13 xalign 1.0
+                    use mp3_settings_divider
 
-            # Divider
-            frame:
-                background Solid("#ffffff22")
-                xsize 510
-                ysize 2
-                xalign 0.5
+                    # Volume
+                    vbox:
+                        spacing 4
+                        xalign 0.5
+                        text "Volume:" color "#aaaaaa" size 16 xalign 0.5
+                        bar:
+                            adjustment ui.adjustment(range=1.0, value=(persistent.mp3_volume if persistent.mp3_volume is not None else 0.8), changed=music_set_volume)
+                            xmaximum 400
+                            ysize 20
+                            xalign 0.5
+                            # Filled part uses the accent colour so you can actually see the level.
+                            left_bar Frame(Solid(persistent.mp3_accent_color), 0, 0)
+                            right_bar Frame(Solid("#333333"), 0, 0)
+                            # A Frame of a plain Solid has no size, so the old thumb was invisible.
+                            # Giving the Solid an explicit size fixes it.
+                            thumb Solid("#ffffff", xsize=14, ysize=28)
+                            thumb_offset 7
+                            thumb_shadow None
+                        hbox:
+                            xsize 400
+                            xalign 0.5
+                            text "0%" color "#666666" size 13 xalign 0.0
+                            text "50%" color "#666666" size 13 xalign 0.5
+                            text "100%" color "#666666" size 13 xalign 1.0
 
-            # Rainbow/GamerRGB toggle
-            $ rainbow_label = "GamerRGB Mode: ON" if persistent.mp3_rainbow_mode else "GamerRGB Mode: OFF"
-            $ rainbow_bg = Solid("#ff00ff") if persistent.mp3_rainbow_mode else Solid("#333333")
-            textbutton rainbow_label:
-                text_color "#ffffff"
-                background rainbow_bg
-                hover_background Solid("#ff00ff")
-                xalign 0.5
-                action [ToggleField(persistent, "mp3_rainbow_mode"), Function(renpy.restart_interaction)]
+                    use mp3_settings_divider
 
-            # Bottom buttons
+                    # Rainbow/GamerRGB toggle
+                    $ rainbow_label = "GamerRGB Mode: ON" if persistent.mp3_rainbow_mode else "GamerRGB Mode: OFF"
+                    $ rainbow_bg = Solid("#ff00ff") if persistent.mp3_rainbow_mode else Solid("#333333")
+                    textbutton rainbow_label:
+                        text_color "#ffffff"
+                        background rainbow_bg
+                        hover_background Solid("#ff00ff")
+                        xalign 0.5
+                        action [ToggleField(persistent, "mp3_rainbow_mode"), Function(renpy.restart_interaction)]
+
+            # Bottom buttons: OUTSIDE the viewport so they are always visible and can't drift.
             hbox:
                 spacing 20
                 xalign 0.5
@@ -897,6 +898,8 @@ screen mp3_settings_popup():
                     background Solid("#333333")
                     hover_background Solid("#df1212")
                     action [
+                        # Rainbow mode off first, otherwise it overwrites the reset colours on the next tick.
+                        SetField(persistent, "mp3_rainbow_mode", False),
                         SetField(persistent, "mp3_bg_color", "#ce0f85d2"),
                         SetField(persistent, "mp3_accent_color", "#00cc99"),
                         SetField(persistent, "mp3_lcdtrip_color", "#d6ec97"),
