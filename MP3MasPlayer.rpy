@@ -724,7 +724,7 @@ screen mp3_info_popup():
         xalign 0.5
         yalign 0.5
         xsize 460
-        ysize 420
+        ysize 460
         xpadding 20
         ypadding 20
         vbox:
